@@ -330,6 +330,7 @@ table.dataTable thead .sorting:after {
     margin: 15px 0;
 }
 
+/* Input additional modificate */
 .input-group-addon {
     color: #fff;
     background: #3276B1;
