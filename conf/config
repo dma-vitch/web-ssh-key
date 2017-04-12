@@ -2,7 +2,15 @@
 host = 127.0.0.1
 port = 8080
 debug = false
-
+#/ is necessary
+dirupload = uploads/
+allow_extension = pub
 
 [deploy_setting]
 ;user = test
+;password = test
+
+[deploy_hosts]
+hosts = host1 \
+        host2 \
+        host3
