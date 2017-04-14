@@ -3,7 +3,7 @@ host = 127.0.0.1
 port = 8080
 debug = false
 #/ is necessary
-dirupload = uploads/
+dir_upload = uploads/
 allow_extension = pub
 
 [deploy_setting]

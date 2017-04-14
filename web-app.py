@@ -2,17 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import os
-from flask import Flask, render_template, url_for, redirect
-from ConfigParser import SafeConfigParser
-import subprocess
+import os.path
 import paramiko
+import subprocess
+from ConfigParser import SafeConfigParser
+from flask import Flask, render_template, redirect, request, url_for, send_from_directory
+from werkzeug import secure_filename
 
 app = Flask(__name__)
 
 # set logger level
 logging.basicConfig(level=logging.DEBUG)
-config_file = "conf/config"
+CONFIG_FILE = "conf/config"
 
 # DEFAULTS = {
 #     'debug': 'false',
@@ -20,28 +21,29 @@ config_file = "conf/config"
 # }
 
 # Parsing config file
-if not os.path.exists(config_file):
-    logging.info('Not found configuration file %s' % (config_file))
+if not os.path.exists(CONFIG_FILE):
+    logging.info('Not found configuration file %s' % CONFIG_FILE)
     exit(65)
 
 config = SafeConfigParser()
 
 # Load the configuration file
-config.read(config_file)
-logging.info('Reading configuration from %s' % (config_file))
+config.read(CONFIG_FILE)
+logging.info('Reading configuration from %s' % CONFIG_FILE)
 
 server_host = config.get('server_setting', 'host')
 server_port = config.getint('server_setting', 'port')
 server_debug = config.get('server_setting', 'debug')
 # This is the path to the upload directory
-uploaded_dir = config.get('server_setting', 'dirupload')
-# These are the extension that we are accepting to be uploaded
-allowed_extensions = config.get('server_setting', 'allow_extension')
+uploaded_dir = config.get('server_setting', 'dir_upload')
 
+
+# These are the extension that we are accepting to be uploaded
 # For a given file, return whether it's an allowed type or not
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1] in ['allowed_extensions']
+           filename.rsplit('.', 1)[1] in [config.get('server_setting', 'allow_extension')]
+
 
 # Render main page
 @app.route("/")
@@ -49,10 +51,12 @@ def index():
     return render_template('index.html')
     # return redirect(url_for('login'))
 
+
 # Render login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     return render_template('login.html')
+
 
 # Route that will process the file upload
 @app.route('/upload', methods=['POST'])
@@ -65,12 +69,13 @@ def upload():
         filename = secure_filename(file.filename)
         # Move the file form the temporal folder to
         # the upload folder we setup
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        # Redirect the user to the uploaded_file route, which
-        # will basicaly show on the browser the uploaded file
+        file.save(os.path.join(uploaded_dir, filename))
+        # will basically show on the browser the uploaded file
         return redirect(url_for('uploaded_file', filename=filename))
     else:
+        logging.info('Not allowed extensions for file %s' % file.filename)
         return render_template('404.html')
+
 
 # This route is expecting a parameter containing the name
 # of a file. Then it will locate that file on the upload
@@ -78,10 +83,11 @@ def upload():
 # an image, that image is going to be show after the upload
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory('uploaded_dir',
+    return send_from_directory(uploaded_dir,
                                filename)
 
-def pexec(*args):
+
+def calling(*args):
     # return subprocess.Popen(args, stdout=subprocess.PIPE).communicate()[0].rstrip()
     return subprocess.Popen(args, shell=True, stderr=subprocess.PIPE)
 
@@ -89,7 +95,7 @@ def pexec(*args):
 # cmd = "/bin/ssh-copy-id" ' ' + "-i" + ' ' + "pub_key" + ' ' + result
 
 # result = username + '@' + hostname
-# pexec('/bin/ssh-copy-id', '-i', 'pub_key', result)
+# calling('/bin/ssh-copy-id', '-i', 'pub_key', result)
 
 # deploys key on server
 def deploy_key(key, server, username, password):
@@ -103,7 +109,7 @@ def deploy_key(key, server, username, password):
 
 
 # key = open(os.path.dirname).read()
-#print(key)
+# print(key)
 # username = os.getlogin()
 # password = getpass()
 # hosts = ["hostname1", "hostname2", "hostname3"]
